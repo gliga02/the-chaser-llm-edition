@@ -13,3 +13,4 @@ dependencies:
   - pip:
     - gradio
     - openai
+    - python-dotenv
