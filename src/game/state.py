@@ -67,6 +67,7 @@ class GameState:
     cash_builder: CashBuilderState = field(default_factory=CashBuilderState)
     chase: ChaseState = field(default_factory = ChaseState)
     final_chase: FinalChaseState = field(default_factory=FinalChaseState)
+    offers: OfferState = field(default_factory=OfferState)
 
     question_pool: List[Question] = field(default_factory = list)
     current_question: Optional[Question] = None
