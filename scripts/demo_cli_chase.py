@@ -81,10 +81,11 @@ def main() -> None:
             a = "X"
 
         state.current_question = q
-        state, chaser_answer = run_chase_step_with_chaser(state, a, chaser)
+        state, chaser_answer, comment = run_chase_step_with_chaser(state, a, chaser)
 
         print(f"Chaser chose: {chaser_answer.chosen_option} "
               f"({'correct' if chaser_answer.is_correct else 'wrong'})")
+        print(f"Chaser comment: {comment}")
         
         if state.phase != GamePhase.CHASE:
             break

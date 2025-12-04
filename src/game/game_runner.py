@@ -24,6 +24,7 @@ from .engine import (
 )
 
 from .chaser_logic import ChaserLogic, ChaserAnswer
+from src.llm.personas import get_random_persona
 
 def load_default_question_pool(root_dir: pathlib.Path) -> List[Question]:
     path = root_dir / "data" / "processed" / "question_chaser.jsonl"
@@ -35,6 +36,7 @@ def load_default_question_pool(root_dir: pathlib.Path) -> List[Question]:
 def initialize_game(root_dir: pathlib.Path) -> GameState:
     questions = load_default_question_pool(root_dir)
     state = start_new_game(questions)
+    state.persona = get_random_persona()
     state = start_cash_builder(state, N_CASH_BUILDER_QUESTION_DEFAULT)
     
     return state
@@ -67,7 +69,7 @@ def run_chase_step_with_chaser(
         state: GameState,
         player_answer: str,
         chaser: ChaserLogic
-) -> (GameState, ChaserAnswer):
+) -> tuple[GameState, ChaserAnswer, str]:
     
     q = state.current_question
     if q is None:
@@ -75,13 +77,18 @@ def run_chase_step_with_chaser(
     
     chaser_answer = chaser.answer_in_chase(q)
 
+    normalized_player_answer = player_answer.strip().upper()
+    player_correct = (normalized_player_answer == q.correct_option)
+
     state = process_chase_step(
         state = state,
         player_answer=player_answer,
         chaser_correct=chaser_answer.is_correct
     )
 
-    return state, chaser_answer
+    comment = chaser.generate_comment(question = q, player_correct=player_correct, chaser_answer=chaser_answer, player_answer_option=normalized_player_answer)
+
+    return state, chaser_answer, comment
 
 def start_final_chase_default(state: GameState) -> GameState:
     state = start_final_chase(

@@ -3,6 +3,7 @@ from enum import Enum, auto
 from typing import List, Optional
 
 from src.utils.data_models import Question
+from src.llm.personas import ChaserPersona
 
 class GamePhase(Enum):
     CASH_BUILDER = auto()
@@ -60,6 +61,8 @@ class FinalChaseState:
 @dataclass
 class GameState:
     phase: GamePhase = GamePhase.CASH_BUILDER
+
+    persona: Optional[ChaserPersona] = None
 
     player: PlayerState = field(default_factory=PlayerState)
     chaser: ChaserState = field(default_factory=ChaserState)
