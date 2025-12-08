@@ -382,4 +382,103 @@ def create_app(root_dir: pathlib.Path) -> gr.Blocks:
             ],
         )
 
+        def chase_submit_cb(state: GameState, chaser_logic: ChaserLogic, player_choice: str):
+            if state is None or chaser_logic is None:
+                return(
+                    state,
+                    "**Phase:** -",
+                    "**Secured cash:** 0",
+                    "Board: No active game",
+                    "No chase question",
+                    "**Chaser choice:** -",
+                    "**Chaser correct?:** -",
+                    "No comment",
+                    "Start a new game first"
+                )
+            
+            if state.phase != GamePhase.CHASE:
+                return(
+                    state,
+                    f"**Phase:** {state.phase.name}",
+                    f"**Secured cash:** {state.player.secured_cash}",
+                    "Board: Not in chase phase",
+                    "No chase question",
+                    "**Chaser choice:** -",
+                    "**Chaser correct?:** -",
+                    "No comment",
+                    "You can only answer Chase questions during the chase phase"
+                )
+            
+            if player_choice not in ["A", "B", "C", "D"]:
+                player_choice = "X"
+
+            if state.current_question is None:
+                q = get_next_chase_question_for_state(state)
+                state.current_question = q
+
+            state, chaser_answer, comment = run_chase_step_with_chaser(state, player_choice, chaser_logic)
+
+            board_status = (
+                f"Board: Player at {state.player.board_position}, "
+                f"Chaser at {state.chaser.board_position}"
+            )
+
+            chaser_choice_text = f"**Chaser choice:** {chaser_answer.chosen_option}"
+            chaser_correct_text = "**Chaser correct?:** yes" if chaser_answer.is_correct else "**Chaser correct?:** no"
+
+            chaser_comment_text = comment
+
+            phase_text = f"**Phase:** {state.phase.name}"
+            secured_text = f"**Secured cash:** {state.player.secured_cash}"
+
+            if state.phase == GamePhase.CHASE:
+                q_next = get_next_chase_question_for_state(state)
+                if q_next is not None:
+                    q_md = (
+                        f"**Question:** {q_next.question}\n\n"
+                        f"A) {q_next.options['A']}\n"
+                        f"B) {q_next.options['B']}\n"
+                        f"C) {q_next.options['C']}\n"
+                        f"D) {q_next.options['D']}"
+                    )
+
+                else:
+                    q_md = "No more chase questions"
+                chase_status = "Next chase question is ready"
+
+            else:
+                if state.outcome_message:
+                    chase_status = state.outcome_message
+                else:
+                    chase_status = f"Chase finished. Phase: {state.phase.name}"
+                q_md = "Chase phase is over"
+
+            return (
+                state,
+                phase_text,
+                secured_text,
+                board_status,
+                q_md,
+                chaser_choice_text,
+                chaser_correct_text,
+                chaser_comment_text,
+                chase_status
+            )
+        
+        chase_submit_btn.click(
+                chase_submit_cb,
+                inputs=[game_state, chaser_logic_state, chase_options],
+                outputs=[
+                    game_state,
+                    current_phase_md,
+                    secured_cash_md,
+                    board_status_md,
+                    chase_question_md,
+                    chaser_choice_md,
+                    chaser_correct_md,
+                    chaser_comment_md,
+                    chase_status_md
+                ]
+            )
+
     return demo
