@@ -12,6 +12,7 @@ from src.game.game_runner import (
     start_final_chase_default,
     advence_final_chase_player,
     advence_final_chase_chaser,
+    get_final_chase_player_question
 )
 from src.game.state import GameState, GamePhase
 from src.game.chaser_logic import ChaserLogic
@@ -88,11 +89,23 @@ def create_app(root_dir: pathlib.Path) -> gr.Blocks:
                 chase_status_md = gr.Markdown("Chase status will appear here.")
 
         # ---------- Final Chase placeholder tab ----------
-        with gr.Tab("Final Chase (coming later)"):
-            gr.Markdown(
-                "### Phase 3 – Final Chase\n\n"
-                "Final Chase UI will be implemented after the main Chase flow is stable."
-            )
+        with gr.Tab("Final Chase"):
+            gr.Markdown("### Phase 3 – Final Chase")
+
+            with gr.Group():
+                final_start_btn = gr.Button("Start Final Chase")
+
+                final_question_md = gr.Markdown("Final chase question will appear here")
+                final_options = gr.Radio(
+                    choices = ["A", "B", "C", "D"],
+                    label = "Your answer",
+                    interactive=True
+                )
+
+                final_submit_btn = gr.Button("Submit final chase answer")
+
+                final_feedback_md = gr.Markdown("Final chase feedback will appear here")
+                final_progress_md = gr.Markdown("Final chase progress: 0 correct")
 
         # ---------- Footer / debug ----------
         gr.Markdown(
@@ -480,5 +493,142 @@ def create_app(root_dir: pathlib.Path) -> gr.Blocks:
                     chase_status_md
                 ]
             )
+        
+        def final_start_cb(state: GameState):
+            if state is None:
+                return (
+                    state,
+                    "**Phase:** -",
+                    "**Secured cash:** 0",
+                    "No active game",
+                    "Final chase progress: 0 correct"
+                )
+            
+            state = start_final_chase_default(state)
+
+            phase_text = f"**Phase:** {state.phase.name}"
+            secured_text = f"**Secured cash:** {state.player.secured_cash}"
+
+            q = get_final_chase_player_question(state)
+            if q is not None:
+                q_md = (
+                    f"**Question:** {q.question}\n\n"
+                    f"A) {q.options['A']}\n"
+                    f"B) {q.options['B']}\n"
+                    f"C) {q.options['C']}\n"
+                    f"D) {q.options['D']}"
+                )
+
+            else:
+                q_md = "No final chase question available"
+
+            progress = "Final chase progress: 0 correct"
+
+            return (
+                state,
+                phase_text,
+                secured_text,
+                q_md,
+                progress
+            )
+        
+        final_start_btn.click(
+            final_start_cb,
+            inputs=[game_state],
+            outputs=[
+                game_state,
+                current_phase_md,
+                secured_cash_md,
+                final_question_md,
+                final_progress_md
+            ]
+        )
+
+        def final_submit_cb(state:GameState, player_choice: str):
+            if state is None:
+                return(
+                    state,
+                    "**Phase:** -",
+                    "**Secured cash:** 0",
+                    "No active game",
+                    "Final chase progress: 0 correct"
+                )
+            
+            if state.phase != GamePhase.FINAL_CHASE:
+                return(
+                    state,
+                    f"**Phase:** {state.phase.name}",
+                    f"**Secured cash:** {state.player.secured_cash}"
+                    "Not in final chase phase",
+                    "Final chase progress: 0 correct"
+                )
+            
+            if player_choice not in ["A", "B", "C", "D"]:
+                player_choice = "X"
+
+            before_correct = state.final_chase.player_current_index if hasattr(
+                state.final_chase, "player_correct"
+            ) else 0
+
+            state = advence_final_chase_player(state, player_choice)
+
+            after_correct = state.final_chase.player_current_index if hasattr(
+                state.final_chase, "player_correct"
+            ) else before_correct
+
+            gained = after_correct - before_correct
+            if gained > 0:
+                feedback = "Correct in final chase"
+            else:
+                feedback = "Wrong in final chase"
+
+            phase_text = f"**Phase:** {state.phase.name}"
+            secured_text = f"**Secured cash:** {state.player.secured_cash}"
+            progress = f"Final chase progress: {after_correct} correct"
+
+            if state.phase == GamePhase.FINAL_CHASE:
+                q = get_final_chase_player_question(state)
+                if q is not None:
+                    q_md = (
+                        f"**Question:** {q.question}\n\n"
+                        f"A) {q.options['A']}\n"
+                        f"B) {q.options['B']}\n"
+                        f"C) {q.options['C']}\n"
+                        f"D) {q.options['D']}"
+                    )
+
+                else:
+                    q_md = "No more final chase questions"
+
+                full_feedback = feedback
+
+            else:
+                if state.outcome_message:
+                    full_feedback = f"{feedback}\n\n{state.outcome_message}"
+                else:
+                    full_feedback = f"{feedback}\n\nFinal chase finished"
+                q_md = "Final chase is over"
+
+            return(
+                state,
+                phase_text,
+                secured_text,
+                full_feedback,
+                progress,
+                q_md
+            )
+        
+        final_submit_btn.click(
+            final_submit_cb,
+            inputs=[game_state, final_options],
+            outputs=[
+                game_state,
+                current_phase_md,
+                secured_cash_md,
+                final_feedback_md,
+                final_progress_md,
+                final_question_md
+            ]
+        )
 
     return demo

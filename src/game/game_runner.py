@@ -110,3 +110,8 @@ def advence_final_chase_chaser(state: GameState, chaser_correct: bool) -> GameSt
     state = process_final_chase_chaser_answer(state, chaser_correct)
 
     return state
+
+def get_final_chase_player_question(state: GameState) -> Question | None:
+    q = get_next_final_chase_question_for_player(state)
+
+    return q
